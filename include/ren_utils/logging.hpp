@@ -14,7 +14,9 @@
  * fclose(f);
  * \endcode
  */
+#pragma once
 #include "basic.h"
+#include "time.hpp"
 #include <filesystem>
 #include <thread>
 #include <unordered_map>
