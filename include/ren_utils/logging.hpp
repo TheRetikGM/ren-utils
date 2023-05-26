@@ -19,6 +19,7 @@
 #include "time.hpp"
 #include <filesystem>
 #include <thread>
+#include <mutex>
 #include <unordered_map>
 
 /// Emit information log.
@@ -143,16 +144,18 @@ public:
    * @param message Message stored in log.
    * @param file File stored in log. For example source file.
    * @param line Line stored in log. For exampel source file line number.
+   * @note Log emitting is thread safe.
    */
   static void Log(LogLevel level, std::string message,
                   std::filesystem::path file, uint32_t line) {
+    std::lock_guard<std::mutex> lock(s_mtx);
     LogInfo log;
     log.level = level;
     log.message = message;
     log.file = file;
     log.line = line;
 
-    for (auto&& [id, listener] : s_logListeners)
+    for (auto&& [_, listener] : s_logListeners)
       listener->OnLog(log);
   }
 
@@ -163,6 +166,7 @@ public:
    */
   template <typename T, typename... Args>
   static T* AddListener(Args... args) {
+    std::lock_guard<std::mutex> lock(s_mtx);
     int id = getID<T>();
     if (s_logListeners.count(id) != 0)
       return dynamic_cast<T *>(s_logListeners[id].get());
@@ -180,6 +184,7 @@ public:
    */
   template <typename T, typename I>
   static T* AddListener(std::initializer_list<I> init_list) {
+    std::lock_guard<std::mutex> lock(s_mtx);
     int id = getID<T>();
     if (s_logListeners.count(id) != 0)
       return dynamic_cast<T *>(s_logListeners[id].get());
@@ -195,6 +200,7 @@ public:
    */
   template <typename T>
   static T* AddListener() {
+    std::lock_guard<std::mutex> lock(s_mtx);
     int id = getID<T>();
     if (s_logListeners.count(id) != 0)
       return dynamic_cast<T *>(s_logListeners[id].get());
@@ -207,6 +213,7 @@ public:
    * @brief Get instsance of the added listener.
    * @tparam T Type of LogListener child. This type must have
    *           been constructed using AddListener<T>() method
+   * @note This function is **NOT** thread safe.
    */
   template <typename T>
   static T* GetListener() {
@@ -224,10 +231,12 @@ public:
    */
   template <typename T>
   static void RemoveListener() {
+    std::lock_guard<std::mutex> lock(s_mtx);
     s_logListeners.erase(getID<T>());
   }
 
 protected:
+  inline static std::mutex s_mtx;
   inline static std::unordered_map<int, std::shared_ptr<LogListener>>
       s_logListeners{};
   inline static int s_lastID{0};
@@ -239,3 +248,4 @@ protected:
 };
 
 } // namespace ren_utils
+
