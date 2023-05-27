@@ -1,6 +1,6 @@
-all: doc ren_utils
+all: doc lib
 
-doc: Doxyfile
+doc:
 	doxygen
 
 lib: meson.build
@@ -9,3 +9,6 @@ lib: meson.build
 
 clean:
 	rm -rf build doc
+
+.PHONY: doc clean
+
