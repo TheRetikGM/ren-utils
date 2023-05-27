@@ -1,7 +1,7 @@
 /**
  * @brief Utilities which have something to do with time
  *        such as Stopwatch, Timer etc
- * @file time.h
+ * @file time.hpp
  * @author Jakub Kloub (theretikgm@gmail.com)
  */
 #pragma once
@@ -58,54 +58,57 @@ using microsec = std::chrono::microseconds;
 using nanosec = std::chrono::nanoseconds;
 
 /**
- * @brief Take elapsed time from one point to another
+ * @brief Measure time elapsed like with real stopwatch.
  *
- * This class can store some time-point and tell you elapsed time
- * from this point.
+ * Default units are seconds with floating point precision.
+ * @tparam Prec Datatype to use for duration
+ * @tparam Rat Ratio betwen seconds. For example: std::milli == std::ratio<1, 1000>
  */
+template<typename Prec = float, typename Rat = std::ratio<1>>
 class Stopwatch {
-  using timer = std::chrono::system_clock;
+  using clock = std::chrono::system_clock;
+  using time_point = std::chrono::time_point<clock>;
+  using duration = std::chrono::duration<Prec, Rat>;
 public:
-  Stopwatch() : m_clockStart(), m_clockEnd(), m_elapsedTime(timer::duration::zero()) {}
+  Stopwatch() : m_curDur(0) { }
 
-  /// Create a starting point in stopwatch.
-  void Start() { m_clockStart = timer::now(); }
-
-  /// Reset the elapsed time and create starting point.
-  void Restart() {
-    m_elapsedTime = timer::duration::zero();
-    Start();
+  /// Start the stopwatch from last time point (or create new one)
+  void Start() {
+    m_startPoint = clock::now();
+    m_stopped = false;
   }
-
-  /// Create a stop point and compute elapsed time from start point.
+  /// Create new starting point
+  void Restart() { Clear(); Start(); }
+  /// Create a stop time-point
   void Stop() {
-    m_clockEnd = timer::now();
-    m_elapsedTime = m_clockEnd - m_clockStart;
+    time_point end = clock::now();
+    m_curDur += std::chrono::duration_cast<duration>(end - m_startPoint);
+    m_startPoint = end;
+    m_stopped = true;
+  }
+  /// Clear current elapsed time.
+  void Clear() { m_curDur = duration(0); }
+  /// Get elapsed time until now or to stop point.
+  template<typename T>
+  unsigned long ElapsedTime() {
+    if (m_stopped)
+      return std::chrono::duration_cast<T>(m_curDur);
+    return std::chrono::duration_cast<T>(m_curDur + std::chrono::duration_cast<duration>(clock::now() - m_startPoint));
   }
 
-  /// Reset the elapsed time.
-  void Clear() { m_elapsedTime = timer::duration::zero(); }
-  void Pause() {
-    m_clockEnd = timer::now();
-    m_elapsedTime += m_clockEnd - m_clockStart;
-  }
-  template<class units>
-  long int ElapsedTime() {
-    return static_cast<long int>(std::chrono::duration_cast<units>(m_elapsedTime).count());
-  }
-  float ElapsedSeconds()
-  {
-    return float(ElapsedTime<nanosec>()) / 1e9f;
-  }
-  float ElapsedMilliseconds()
-  {
-    return float(ElapsedTime<nanosec>()) / 1e6f;
-  }
+  /// Get elapsed time until now or to stop point as `std::chrono::duration`.
+  duration ElapsedTimeDur() {
+    if (m_stopped)
+      return m_curDur;
+    return m_curDur + std::chrono::duration_cast<duration>(clock::now() - m_startPoint);
+   }
 
-protected:
-  timer::time_point m_clockStart;
-  timer::time_point m_clockEnd;
-  timer::duration	m_elapsedTime;
+private:
+  // Time sections between start and stop points.
+  time_point m_startPoint;
+  // Stores duration when the stopwatch was not stopped.
+  duration m_curDur;
+  bool m_stopped{ false };
 };
 
 } // namespace ren_utils

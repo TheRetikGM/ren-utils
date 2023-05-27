@@ -8,6 +8,7 @@
 #include "AvgSampler.hpp"
 #include "basic.h"
 #include "logging.hpp"
+#include "time.hpp"
 
 /**
  * @brief Namespace containing all of the utilities.
