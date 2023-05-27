@@ -6,6 +6,8 @@
  */
 #pragma once
 #include "basic.h"
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <ctime>
 #include <chrono>
@@ -40,11 +42,12 @@ public:
   }
 
   /**
-   * @brief Convert this type info to string in format `YYYY-mm-dd HH:MM:SS`
+   * @brief Convert this type info to string in specified format.
    */
-  std::string ToString() const {
-    return string_format("%04i-%02i-%02i %02i:%02i:%02i", m_year,
-                         m_month, m_day, m_hour, m_minute, m_second);
+  std::string ToString(const char* fmt = "%Y-%m-%d %H:%M:%S") const {
+    std::ostringstream oss;
+    oss << std::put_time(&m_tim, fmt);
+    return oss.str();
   }
 
 private:
