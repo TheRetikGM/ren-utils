@@ -11,6 +11,7 @@
 #include <string>
 #include <ctime>
 #include <chrono>
+#include <functional>
 
 namespace ren_utils {
 
@@ -112,6 +113,99 @@ private:
   // Stores duration when the stopwatch was not stopped.
   duration m_curDur;
   bool m_stopped{ false };
+};
+
+
+/**
+ * @brief Time an execution of some function.
+ */
+class Timer {
+public:
+  bool m_Enabled{ false };  ///< If disabled, then Update() will have no effect.
+  bool m_Repeat{ false };   ///< Repeat timer on timeout.
+  uint32_t m_ID{ 0 };
+
+  /// Create a new disabled timer.
+  Timer() : m_func() { }
+
+  /**
+   * @brief Prepare the timer. This needs to be called for the timer to work.
+   * @param timeout Number of seconds to timeout after
+   * @param func Function to call on timeout
+   * @param args Arguments to pass to `func`
+   * @note This will enable the timer.
+   */
+  template<class Func, class... Args>
+  void Prepare(float timeout, const Func& func, const Args&... args) {
+    m_func = [func, args...](){ func(args...); };
+    m_timeout = timeout;
+    m_Enabled = true;
+    m_currTime = 0.0f;
+  }
+
+  /**
+   * @brief Prepare the timer. This needs to be called for the timer to work.
+   * @param timeout Number of seconds to timeout after
+   * @param func Member function to call on timeout
+   * @param inst Pointer to the instance of the class which has `func` as a member function.
+   * @param args Arguments to pass to `func`
+   * @note This will enable the timer.
+   */
+  template<class Inst, class Func, class... Args, class = std::enable_if_t<std::is_member_function_pointer_v<Func>>>
+  void Prepare(float timeout, const Func& func, const Inst& inst, const Args&... args) {
+    m_func = [inst, func, args...](){ (inst->*func)(args...); };
+    m_timeout = timeout;
+    m_Enabled = true;
+    m_currTime = 0.0f;
+  }
+
+  /**
+   * @brief Reset the timer into the unprepared state.
+   *
+   * This will reset timeout funtion, timeout, current time state and will disable the timer.
+   * @note This will **NOT** set the m_Repeat to false
+   */
+  void Reset() {
+    m_func = {};
+    m_timeout = 0.0f;
+    m_currTime = 0.0f;
+    m_Enabled = false;
+  }
+
+  /**
+   * @brief Clear the current time state.
+   *
+   * Time state is the number of seconds this timer is running for (accumulated
+   * from delta time of Update() method).
+   * @note Timer will remain enabled.
+   */
+  void Clear() { m_currTime = 0.0f; }
+
+  /**
+   * @brief Update the timer time and call timeout function if needed.
+   * @param dt Delta time
+   */
+  void Update(float dt) {
+    if (!m_Enabled)
+      return;
+
+    m_currTime += dt;
+    if (m_currTime > m_timeout) {
+      m_func();
+      Clear();
+      m_Enabled = m_Repeat;
+    }
+  }
+
+  /// @return Current counted time.
+  const float& CurrentTime() const { return m_currTime; }
+  /// @return  Prepared timeout.
+  const float& Timeout() const { return m_timeout; }
+
+private:
+  std::function<void()> m_func;
+  float m_timeout{ 0.0f };
+  float m_currTime{ 0.0f };
 };
 
 } // namespace ren_utils
