@@ -22,17 +22,6 @@
 #include <mutex>
 #include <unordered_map>
 
-/// Emit information log.
-#define LOG_I(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::info, message, __FILE__, __LINE__)
-/// Emit statuc log.
-#define LOG_S(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::status, message, __FILE__, __LINE__)
-/// Emit warning log.
-#define LOG_W(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::warning, message, __FILE__, __LINE__)
-/// Emit error log.
-#define LOG_E(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::error, message, __FILE__, __LINE__)
-/// Emit critical error log.
-#define LOG_C(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::critical, message, __FILE__, __LINE__)
-
 
 namespace ren_utils {
 
@@ -77,7 +66,7 @@ public:
   virtual ~LogListener() {}
   /**
    * @brief Function called when LogEmitter emits a log
-   * @param log Log emmited from LogEmitter
+   * @param log Log emitted from LogEmitter
    */
   virtual void OnLog(const LogInfo& log) = 0;
 };
@@ -144,11 +133,9 @@ public:
    * @param message Message stored in log.
    * @param file File stored in log. For example source file.
    * @param line Line stored in log. For exampel source file line number.
-   * @note Log emitting is thread safe.
    */
   static void Log(LogLevel level, std::string message,
                   std::filesystem::path file, uint32_t line) {
-    std::lock_guard<std::mutex> lock(s_mtx);
     LogInfo log;
     log.level = level;
     log.message = message;
@@ -166,7 +153,6 @@ public:
    */
   template <typename T, typename... Args>
   static T* AddListener(Args... args) {
-    std::lock_guard<std::mutex> lock(s_mtx);
     int id = getID<T>();
     if (s_logListeners.count(id) != 0)
       return dynamic_cast<T *>(s_logListeners[id].get());
@@ -184,7 +170,6 @@ public:
    */
   template <typename T, typename I>
   static T* AddListener(std::initializer_list<I> init_list) {
-    std::lock_guard<std::mutex> lock(s_mtx);
     int id = getID<T>();
     if (s_logListeners.count(id) != 0)
       return dynamic_cast<T *>(s_logListeners[id].get());
@@ -200,7 +185,6 @@ public:
    */
   template <typename T>
   static T* AddListener() {
-    std::lock_guard<std::mutex> lock(s_mtx);
     int id = getID<T>();
     if (s_logListeners.count(id) != 0)
       return dynamic_cast<T *>(s_logListeners[id].get());
@@ -213,13 +197,12 @@ public:
    * @brief Get instsance of the added listener.
    * @tparam T Type of LogListener child. This type must have
    *           been constructed using AddListener<T>() method
-   * @note This function is **NOT** thread safe.
    */
   template <typename T>
   static T* GetListener() {
     int id = getID<T>();
     if (s_logListeners.count(id) != 0)
-      return dynamic_cast<T *>(s_logListeners[id].get());
+      return dynamic_cast<T*>(s_logListeners[id].get());
     else
       return nullptr;
   }
@@ -231,12 +214,10 @@ public:
    */
   template <typename T>
   static void RemoveListener() {
-    std::lock_guard<std::mutex> lock(s_mtx);
     s_logListeners.erase(getID<T>());
   }
 
 protected:
-  inline static std::mutex s_mtx;
   inline static std::unordered_map<int, std::shared_ptr<LogListener>>
       s_logListeners{};
   inline static int s_lastID{0};
@@ -246,6 +227,78 @@ protected:
     return current_id;
   }
 };
+
+/// Emit information log.
+#define LOG_I(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::info, message, __FILE__, __LINE__)
+/// Emit statuc log.
+#define LOG_S(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::status, message, __FILE__, __LINE__)
+/// Emit warning log.
+#define LOG_W(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::warning, message, __FILE__, __LINE__)
+/// Emit error log.
+#define LOG_E(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::error, message, __FILE__, __LINE__)
+/// Emit critical error log.
+#define LOG_C(message) ren_utils::LogEmitter::Log(ren_utils::LogLevel::critical, message, __FILE__, __LINE__)
+
+/**
+ * @brief Thread-safe wrapper for LogEmitter.
+ */
+class TsLogEmitter {
+public:
+  inline static std::mutex s_Mtx{};
+
+  /// Thread-safe version of LogEmitter::Log() method.
+  static void Log(LogLevel level, std::string message,
+                  std::filesystem::path file, uint32_t line) {
+    std::lock_guard<std::mutex> lock(s_Mtx);
+    return LogEmitter::Log(level, message, file, line);
+  }
+
+  /// Thread-safe version of LogEmitter::AddListener() method.
+  template <typename T, typename... Args>
+  static T* AddListener(Args... args) {
+    std::lock_guard<std::mutex> lock(s_Mtx);
+    return LogEmitter::AddListener<T, Args...>(args...);
+  }
+
+  /// Thread-safe version of LogEmitter::AddListener() method.
+  template <typename T, typename I>
+  static T* AddListener(std::initializer_list<I> init_list) {
+    std::lock_guard<std::mutex> lock(s_Mtx);
+    return LogEmitter::AddListener<T, I>(init_list);
+  }
+
+  /// Thread-safe version of LogEmitter::AddListener() method.
+  template <typename T>
+  static T* AddListener() {
+    std::lock_guard<std::mutex> lock(s_Mtx);
+    return LogEmitter::AddListener<T>();
+  }
+
+  /// Thread-safe version of LogEmitter::GetListener() method.
+  template <typename T>
+  static T* GetListener() {
+    std::lock_guard<std::mutex> lock(s_Mtx);
+    return LogEmitter::GetListener<T>();
+  }
+
+  /// Thread-safe veresion of LogEmitter::RemoveListener() method.
+  template <typename T>
+  static void RemoveListener() {
+    std::lock_guard<std::mutex> lock(s_Mtx);
+    LogEmitter::RemoveListener<T>();
+  }
+};
+
+/// Thread-safe emit information log.
+#define TS_LOG_I(message) ren_utils::TsLogEmitter::Log(ren_utils::LogLevel::info, message, __FILE__, __LINE__)
+/// Thread-safe emit statuc log.
+#define TS_LOG_S(message) ren_utils::TsLogEmitter::Log(ren_utils::LogLevel::status, message, __FILE__, __LINE__)
+/// Thread-safe emit warning log.
+#define TS_LOG_W(message) ren_utils::TsLogEmitter::Log(ren_utils::LogLevel::warning, message, __FILE__, __LINE__)
+/// Thread-safe emit error log.
+#define TS_LOG_E(message) ren_utils::TsLogEmitter::Log(ren_utils::LogLevel::error, message, __FILE__, __LINE__)
+/// Thread-safe emit critical error log.
+#define TS_LOG_C(message) ren_utils::TsLogEmitter::Log(ren_utils::LogLevel::critical, message, __FILE__, __LINE__)
 
 } // namespace ren_utils
 
