@@ -269,7 +269,7 @@ namespace ren_utils {
           string_format("Cannot allocate memory in %s stack. Stacks would be overlapping. Total size = %lu, Left stack size = %lu. Right stack size = %lu. Wanted size = %lu",
             S == AllocSide::LEFT ? "LEFT" : "RIGHT", alloc.GetSize(), alloc.GetCurrentSize<AllocSide::LEFT>(), alloc.GetCurrentSize<AllocSide::RIGHT>(), sizeof(T))
           );
-    Ptr<T, typename DoubleStackAllocator::PtrData> ptr{
+    Ptr<T, DoubleStackAllocator::PtrData> ptr{
       new (p_mem) T(args...),
       { marker, &alloc }
     };
