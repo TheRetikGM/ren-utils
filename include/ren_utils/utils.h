@@ -9,6 +9,7 @@
 #include "basic.h"
 #include "logging.hpp"
 #include "time.hpp"
+#include "alloc/alloc.h"
 
 /**
  * @brief Namespace containing all of the utilities.
