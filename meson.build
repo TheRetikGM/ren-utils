@@ -28,6 +28,7 @@ if get_option('build_tests')
 
   test_bb_exe = executable('bb_tests', test_bb_src,
     dependencies : [dependency('gtest_main')],
+    link_with : ren_utils_lib,
     include_directories : inc)
 
   test('black_box', test_bb_exe, workdir : meson.build_root())

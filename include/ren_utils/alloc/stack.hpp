@@ -37,7 +37,8 @@ namespace ren_utils {
       : m_totalStackSize(stack_size)
       , m_pTop(0)
     {
-      assert(stack_size != size_t(-1));
+      if (stack_size == 0 || stack_size == InvalidMarker)
+        throw std::invalid_argument(string_format("Invalid stack_size{ %lu }. It cannot be equal to 0 or %lu.", stack_size, InvalidMarker));
       m_stack = new uint8_t[stack_size];
     }
 
@@ -52,7 +53,7 @@ namespace ren_utils {
      * @return Pointer to the memory or `nullptr` on failure.
      */
     void* Alloc(size_t n_bytes) {
-      if (m_pTop + n_bytes >= m_totalStackSize)
+      if (m_pTop + n_bytes > m_totalStackSize)
         return nullptr;
       size_t p = m_pTop;
       m_pTop += n_bytes;
@@ -77,9 +78,9 @@ namespace ren_utils {
     void Clear() { m_pTop = 0; }
 
     /// @return Total stack size defined at construction.
-    size_t GetSize() { return m_totalStackSize; }
+    size_t GetSize() const { return m_totalStackSize; }
     /// @return Current used size on the stack.
-    size_t GetCurrentSize() { return m_pTop; }
+    size_t GetCurrentSize() const { return m_pTop; }
     /// @return True if stack is empty.
     bool Empty() { return m_pTop == 0; }
 
