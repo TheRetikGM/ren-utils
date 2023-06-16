@@ -20,3 +20,15 @@ ren_utils_dep = declare_dependency(
   include_directories : inc,
   link_with : ren_utils_lib
 )
+
+# Build integration tests
+if get_option('build_tests')
+  test_bb_src = []
+  subdir('tests')
+
+  test_bb_exe = executable('bb_tests', test_bb_src,
+    dependencies : [dependency('gtest_main')],
+    include_directories : inc)
+
+  test('black_box', test_bb_exe, workdir : meson.build_root())
+endif

@@ -10,5 +10,8 @@ lib: meson.build
 clean:
 	rm -rf build doc
 
+test: lib
+	cd build && ninja && ./bb_tests
+
 .PHONY: doc clean
 
