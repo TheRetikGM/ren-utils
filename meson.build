@@ -7,9 +7,9 @@ project('ren-utils', 'cpp',
 
 inc = include_directories('include')
 
-src = files(
-  'src/basic.cpp'
-)
+# Add all source in subdirectories.
+src = []
+subdir('src')
 
 ren_utils_lib = library('ren_utils',
   src,

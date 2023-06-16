@@ -203,3 +203,4 @@ TEST(Ptr_StackAllocator, delete_ptr_wrong_order) {
   EXPECT_THROW(delete_ptr(p3), std::invalid_argument);
   delete_ptr(p1);
 }
+

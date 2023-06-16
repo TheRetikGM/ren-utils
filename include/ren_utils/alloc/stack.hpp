@@ -27,62 +27,43 @@ namespace ren_utils {
     /// Identifies position between allocated spaces in the stack.
     using Marker = size_t;
     const static Marker InvalidMarker = Marker(-1);
-    struct PtrData{ Marker marker{ StackAllocator::InvalidMarker }; StackAllocator* p_alloc{ nullptr }; };
+    struct PtrData{
+      /// Marker identifying start of the object the pointer is pointing to.
+      Marker marker{ StackAllocator::InvalidMarker };
+      /// Pointer to Allocator where the object is allocated.
+      StackAllocator* p_alloc{ nullptr };
+    };
 
     /**
      * @brief Create new empty StackAllocator with given stack size
      * @param stack_size Size of the stack to allocate.
      */
-    explicit StackAllocator(size_t stack_size)
-      : m_totalStackSize(stack_size)
-      , m_pTop(0)
-    {
-      if (stack_size == 0 || stack_size == InvalidMarker)
-        throw std::invalid_argument(string_format("Invalid stack_size{ %lu }. It cannot be equal to 0 or %lu.", stack_size, InvalidMarker));
-      m_stack = new uint8_t[stack_size];
-    }
-
+    explicit StackAllocator(size_t stack_size);
     /// Free the entire stack on destrution.
-    ~StackAllocator() {
-      delete[] m_stack;
-    }
+    ~StackAllocator();
 
     /**
      * @brief Allocate memory on the stack
      * @param n_bytes Number of bytes to allocate
      * @return Pointer to the memory or `nullptr` on failure.
      */
-    void* Alloc(size_t n_bytes) {
-      if (m_pTop + n_bytes > m_totalStackSize)
-        return nullptr;
-      size_t p = m_pTop;
-      m_pTop += n_bytes;
-      return m_stack + p;
-    }
-
+    void* Alloc(size_t n_bytes);
     /// @return marker to the current top of the stack.
-    Marker GetMarker() const { return Marker(m_pTop); }
-
+    inline Marker GetMarker() const { return Marker(m_pTop); }
     /**
      * @brief Free all allocated memory up to the given marker.
      * @param marker Marker to free the memory up to
      * @exception std::invalid_argument on invalid marker
      */
-    void FreeToMarker(const Marker& marker) {
-      if (marker > m_pTop)
-        throw std::invalid_argument("This marker is not valid. It may have been implicitly freed by a call to FreeToMarker() with marker that was pointing to lower object in the stack.");
-      m_pTop = marker;
-    }
-
+    void FreeToMarker(const Marker& marker);
     /// Free all memory allocated in the stack allocator.
-    void Clear() { m_pTop = 0; }
-
+    inline void Clear() { m_pTop = 0; }
     /// @return Total stack size defined at construction.
-    size_t GetSize() const { return m_totalStackSize; }
+    inline size_t GetSize() const { return m_totalStackSize; }
     /// @return Current used size on the stack.
-    size_t GetCurrentSize() const { return m_pTop; }
+    inline size_t GetCurrentSize() const { return m_pTop; }
     /// @return True if stack is empty.
-    bool Empty() { return m_pTop == 0; }
+    inline bool Empty() { return m_pTop == 0; }
 
   private:
     /// Holds the stack memory. All the allocations point to this memory.
