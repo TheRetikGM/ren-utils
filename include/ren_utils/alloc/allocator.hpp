@@ -30,6 +30,10 @@ namespace ren_utils {
       return *m_Ptr;
     }
     inline T& operator*() { return this->Get(); }
+    inline operator bool() const { return m_Ptr; }
+    inline bool operator==(const Ptr<T, AllocPtrData>& rhs) const { return m_Ptr == rhs.m_Ptr; }
+    inline bool operator!=(const Ptr<T, AllocPtrData>& rhs) const { return m_Ptr != rhs.m_Ptr; }
+    inline bool operator!() const { return !m_Ptr; }
   };
 
   /**
