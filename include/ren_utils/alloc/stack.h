@@ -135,63 +135,27 @@ namespace ren_utils {
      * @brief Create DoubleStackAllocator with given memory size
      * @param total_size Total size of the memory buffer in bytes.
      */
-    explicit DoubleStackAllocator(size_t total_size)
-      : m_memory(nullptr)
-      , m_totalMemSize(total_size)
-      , m_left(0)
-      , m_right(total_size)
-    {
-      assert(total_size != size_t(-1));
-      m_memory = new uint8_t[total_size];
-    }
-    ~DoubleStackAllocator() { delete[] m_memory; }
+    explicit DoubleStackAllocator(size_t total_size);
+    ~DoubleStackAllocator();
 
     /**
      * @brief Allocate memory on left or right stack.
      * @param n_bytes Number of bytes to allocate
      * @return Valid pointer to memory or nullptr on failure. That is if the two stacks are overlaping.
      */
-    void* Alloc(Side side, size_t n_bytes) {
-      size_t m = m_left;
-      if (side == Side::LEFT) {
-        if (m_left + n_bytes > m_right)
-          return nullptr;
-        m_left += n_bytes;
-      } else {
-        if (n_bytes > m_right || m_right - n_bytes < m_left)
-          return nullptr;
-        m = m_right -= n_bytes;
-      }
-      return m_memory + m;
-    }
+    void* Alloc(Side side, size_t n_bytes);
     /// @return Marker to the current top of the left or right stack.
     inline Marker GetMarker(Side side) const {
       if (side == Side::LEFT)
         return Marker{ side, m_left };
-      else
-        return Marker{ side, m_right };
+      return Marker{ side, m_right };
     }
     /**
      * @brief Free allocated memory up to given marker.
      * @note This will **NOT** destroy any object in this memory.
      * @param marker Marker to which to free memory.
      */
-    void FreeToMarker(const Marker& marker) {
-      const std::string errmsg = string_format(
-          "This %s marker is not valid. It may have been implicitly freed by a call to FreeToMarker()"
-          " with marker that was pointing to lower object in the stack.",
-          marker.side == Side::LEFT ? "LEFT" : "RIGHT"
-        );
-      if (marker.side == Side::LEFT) {
-        if (marker.idx > m_left)
-          throw std::invalid_argument(errmsg);
-        m_left = marker.idx;
-      } else {
-        if (marker.idx < m_right)
-          throw std::invalid_argument(errmsg);
-        m_right = marker.idx;
-      }
-    }
+    void FreeToMarker(const Marker& marker);
     /// Free all allocated memory on both stacks.
     inline void ClearAll() {
       m_left = 0;
@@ -210,15 +174,13 @@ namespace ren_utils {
     inline size_t GetCurrentSize(Side side) const {
       if (side == Side::LEFT)
         return m_left;
-      else
-        return m_totalMemSize - m_right;
+      return m_totalMemSize - m_right;
     }
     /// @return True if left or right stack is empty.
     inline bool Empty(Side side) {
       if (side == Side::LEFT)
         return m_left == 0;
-      else
-        return m_right == m_totalMemSize;
+      return m_right == m_totalMemSize;
     }
     /// @return True if both stacks are empty.
     inline bool EmptyBoth() { return Empty(Side::LEFT) && Empty(Side::RIGHT); }

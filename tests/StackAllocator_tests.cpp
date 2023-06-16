@@ -5,7 +5,7 @@
  */
 #include <algorithm>
 #include <gtest/gtest.h>
-#include <ren_utils/alloc/stack.hpp>
+#include <ren_utils/alloc/stack.h>
 #include <ren_utils/alloc/allocator.hpp>
 #include <stdexcept>
 using namespace ren_utils;
