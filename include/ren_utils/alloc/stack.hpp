@@ -151,9 +151,9 @@ namespace ren_utils {
      * @param n_bytes Number of bytes to allocate
      * @return Valid pointer to memory or nullptr on failure. That is if the two stacks are overlaping.
      */
-    template<Side S> void* Alloc(size_t n_bytes) {
+    void* Alloc(Side side, size_t n_bytes) {
       size_t m = m_left;
-      if constexpr (S == Side::LEFT) {
+      if (side == Side::LEFT) {
         if (m_left + n_bytes > m_right)
           return nullptr;
         m_left += n_bytes;
@@ -165,11 +165,11 @@ namespace ren_utils {
       return m_memory + m;
     }
     /// @return Marker to the current top of the left or right stack.
-    template<Side S> inline Marker GetMarker() const {
-      if constexpr (S == Side::LEFT)
-        return Marker{ S, m_left };
+    inline Marker GetMarker(Side side) const {
+      if (side == Side::LEFT)
+        return Marker{ side, m_left };
       else
-        return Marker{ S, m_right };
+        return Marker{ side, m_right };
     }
     /**
      * @brief Free allocated memory up to given marker.
@@ -198,8 +198,8 @@ namespace ren_utils {
       m_right = m_totalMemSize;
     }
     /// Free all allocated memory on left or right stack.
-    template<Side S> inline void Clear() {
-      if constexpr (S == Side::LEFT)
+    inline void Clear(Side side) {
+      if (side == Side::LEFT)
         m_left = 0;
       else
         m_right = m_totalMemSize;
@@ -207,21 +207,21 @@ namespace ren_utils {
     /// @return Total memory size on which this allocator operates.
     size_t GetSize() const { return m_totalMemSize; }
     /// @return Current used size on the left or right stack.
-    template<Side S> inline size_t GetCurrentSize() const {
-      if constexpr (S == Side::LEFT)
+    inline size_t GetCurrentSize(Side side) const {
+      if (side == Side::LEFT)
         return m_left;
       else
         return m_totalMemSize - m_right;
     }
     /// @return True if left or right stack is empty.
-    template<Side S> inline bool Empty() {
-      if constexpr (S == Side::LEFT)
+    inline bool Empty(Side side) {
+      if (side == Side::LEFT)
         return m_left == 0;
       else
         return m_right == m_totalMemSize;
     }
     /// @return True if both stacks are empty.
-    inline bool EmptyBoth() { return Empty<Side::LEFT>() && Empty<Side::RIGHT>(); }
+    inline bool EmptyBoth() { return Empty(Side::LEFT) && Empty(Side::RIGHT); }
 
   private:
     uint8_t* m_memory{ nullptr };
@@ -241,15 +241,17 @@ namespace ren_utils {
    * @return Pointer object wrapping this instance.
    * @exception std::runtime_error when there is no space for this object in DoubleStackAllocator.
    */
-  template<class T, AllocSide S, class... Args>
+  template<class T, class... Args>
   Ptr<T, DoubleStackAllocator::PtrData>
-  new_ptr(DoubleStackAllocator& alloc, const Args&... args) {
-    auto marker = alloc.GetMarker<S>();
-    void* p_mem = alloc.Alloc<S>(sizeof(T));
+  new_ptr(DoubleStackAllocator& alloc, AllocSide side, const Args&... args) {
+    auto marker = alloc.GetMarker(side);
+    void* p_mem = alloc.Alloc(side, sizeof(T));
     if (!p_mem)
       throw std::runtime_error(
           string_format("Cannot allocate memory in %s stack. Stacks would be overlapping. Total size = %lu, Left stack size = %lu. Right stack size = %lu. Wanted size = %lu",
-            S == AllocSide::LEFT ? "LEFT" : "RIGHT", alloc.GetSize(), alloc.GetCurrentSize<AllocSide::LEFT>(), alloc.GetCurrentSize<AllocSide::RIGHT>(), sizeof(T))
+            side == AllocSide::LEFT ? "LEFT" : "RIGHT", alloc.GetSize(),
+            alloc.GetCurrentSize(AllocSide::LEFT),
+            alloc.GetCurrentSize(AllocSide::RIGHT), sizeof(T))
           );
     Ptr<T, DoubleStackAllocator::PtrData> ptr{
       new (p_mem) T(args...),
