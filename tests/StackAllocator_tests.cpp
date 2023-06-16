@@ -3,6 +3,7 @@
  * @file StackAllocator_tests.cpp
  * @author Jakub Kloub (theretikgm@gmail.com)
  */
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <ren_utils/alloc/stack.hpp>
 #include <ren_utils/alloc/allocator.hpp>
@@ -147,4 +148,58 @@ TEST(StackAllocator, Empty) {
   EXPECT_TRUE(alloc.Empty());
   alloc.Alloc(1);
   EXPECT_FALSE(alloc.Empty());
+}
+
+TEST(Ptr_StackAllocator, new_ptr_basic) {
+  StackAllocator alloc(70);
+
+  auto p = new_ptr<int>(alloc, 7);
+  auto p_s = new_ptr<std::string>(alloc, "test");
+  ASSERT_NE(p.m_Ptr, nullptr);
+  ASSERT_NE(p_s.m_Ptr, nullptr);
+  EXPECT_EQ(*p, 7);
+  EXPECT_EQ(*p_s, "test");
+  EXPECT_TRUE(p);
+  EXPECT_TRUE(p_s);
+
+  delete_ptr(p_s);
+  delete_ptr(p);
+}
+
+TEST(Ptr_StackAllocator, new_ptr_sizes) {
+  StackAllocator alloc(100);
+  new_ptr<int>(alloc, 7);
+  auto p2 = new_ptr<std::string>(alloc, "Hey");
+  new_ptr<uint16_t>(alloc, 65000);
+
+  ASSERT_EQ(alloc.GetCurrentSize(), sizeof(int) + sizeof(std::string) + sizeof(uint16_t));
+
+  delete_ptr(p2);
+}
+
+TEST(Ptr_StackAllocator, new_ptr_too_large) {
+  StackAllocator alloc(10);
+  new_ptr<int>(alloc, 1);
+  EXPECT_THROW(new_ptr<std::string>(alloc, "test"), std::runtime_error);
+}
+
+TEST(Ptr_StackAllocator, delete_ptr_basic) {
+  StackAllocator alloc(20);
+  auto p1 = new_ptr<int>(alloc, 1);
+  auto p2 = new_ptr<size_t>(alloc, 2);
+  delete_ptr(p2);
+  EXPECT_EQ(alloc.GetCurrentSize(), sizeof(int));
+  delete_ptr(p1);
+  EXPECT_EQ(alloc.GetCurrentSize(), 0U);
+}
+
+TEST(Ptr_StackAllocator, delete_ptr_wrong_order) {
+  StackAllocator alloc(30);
+  auto p1 = new_ptr<int>(alloc, 1);
+  auto p2 = new_ptr<char>(alloc, 'a');
+  auto p3 = new_ptr<size_t>(alloc, 2);
+
+  delete_ptr(p2);
+  EXPECT_THROW(delete_ptr(p3), std::invalid_argument);
+  delete_ptr(p1);
 }
