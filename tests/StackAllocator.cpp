@@ -1,5 +1,5 @@
 /**
- * @breif This file contains tests for ren_utils/alloc/StackAllocator
+ * @brief This file contains tests for ren_utils/alloc/StackAllocator
  * @file StackAllocator_tests.cpp
  * @author Jakub Kloub (theretikgm@gmail.com)
  */
@@ -55,6 +55,16 @@ TEST(StackAllocator, Alloc) {
   ASSERT_EQ(a.Alloc(1), nullptr);
   ASSERT_EQ(a.Alloc(100), nullptr);
   ASSERT_TRUE(b != c && c != d && b != d);
+}
+
+TEST(StackAllocator, Alloc_aligned) {
+  StackAllocator a(50);
+  auto p1 = a.Alloc(5, Align(2));
+  auto p2 = a.Alloc(4, Align(4));
+  auto p3 = a.Alloc(1, Align(16));
+  ASSERT_TRUE(Align::IsAligned(p1, 2));
+  ASSERT_TRUE(Align::IsAligned(p2, 4));
+  ASSERT_TRUE(Align::IsAligned(p3, 16));
 }
 
 TEST(StackAllocator, GetMarker) {
@@ -150,7 +160,7 @@ TEST(StackAllocator, Empty) {
   EXPECT_FALSE(alloc.Empty());
 }
 
-TEST(StackAllocator_Ptr, new_ptr_basic) {
+TEST(StackAllocator_Ptr, new_ptr_unaligned) {
   StackAllocator alloc(70);
 
   auto p = new_ptr<int>(alloc, 7);
@@ -164,6 +174,22 @@ TEST(StackAllocator_Ptr, new_ptr_basic) {
 
   delete_ptr(p_s);
   delete_ptr(p);
+}
+
+TEST(StackAllocator_Ptr, new_ptr_aligned) {
+  StackAllocator alloc(70);
+
+  auto p_int = new_ptr<int>(alloc, Align(4), 7);
+  auto p_string = new_ptr<std::string>(alloc, Align(16),  "test");
+  ASSERT_NE(p_int.m_Ptr, nullptr);
+  ASSERT_NE(p_string.m_Ptr, nullptr);
+  ASSERT_EQ(*p_int, 7);
+  ASSERT_EQ(*p_string, "test");
+  ASSERT_TRUE(Align::IsAligned(p_int.m_Ptr, 4));
+  ASSERT_TRUE(Align::IsAligned(p_string.m_Ptr, 16));
+
+  delete_ptr(p_string);
+  delete_ptr(p_int);
 }
 
 TEST(StackAllocator_Ptr, new_ptr_sizes) {

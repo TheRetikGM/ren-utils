@@ -86,6 +86,11 @@ namespace ren_utils {
       p_aligned -= shift;
       return reinterpret_cast<T*>(p_aligned);
     }
+
+    template<typename T>
+    inline static bool IsAligned(T* ptr, size_t align) {
+      return reinterpret_cast<uintptr_t>(ptr) % align == 0;
+    }
   };
 
   /**
