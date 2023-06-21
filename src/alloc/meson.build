@@ -1,3 +1,4 @@
 src += files(
-  'stack.cpp'
+  './StackAllocator.cpp',
+  './DoubleStackAllocator.cpp',
   )

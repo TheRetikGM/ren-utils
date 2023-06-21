@@ -13,6 +13,7 @@
 #pragma once
 
 #include "aligned.hpp"
-#include "pool.hpp"
-#include "stack.h"
+#include "PoolAllocator.hpp"
+#include "StackAllocator.h"
+#include "DoubleStackAllocator.h"
 #include "allocator.hpp"
