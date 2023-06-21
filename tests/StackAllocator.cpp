@@ -1,6 +1,6 @@
 /**
  * @brief This file contains tests for ren_utils/alloc/StackAllocator
- * @file StackAllocator_tests.cpp
+ * @file StackAllocator.cpp
  * @author Jakub Kloub (theretikgm@gmail.com)
  */
 #include <algorithm>

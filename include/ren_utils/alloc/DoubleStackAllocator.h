@@ -62,7 +62,7 @@ namespace ren_utils {
      * @return Pointer to object or `nullptr` on failure.
      */
     template<class T, class... Args>
-    void* New(Side side, const Args&... args) {
+    T* New(Side side, const Args&... args) {
       T* p_mem = reinterpret_cast<T*>(Alloc(side, sizeof(T)));
       return p_mem ? new (p_mem) T(args...) : nullptr;
     }
@@ -75,7 +75,7 @@ namespace ren_utils {
      * @return Aligned pointer to object or `nullptr` on failure
      */
     template<class T, class... Args>
-    void* New(Side side, Align align, const Args&... args) {
+    T* New(Side side, Align align, const Args&... args) {
       T* p_mem = reinterpret_cast<T*>(Alloc(side, sizeof(T), align));
       return p_mem ? new (p_mem) T(args...) : nullptr;
     }
