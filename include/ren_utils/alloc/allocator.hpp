@@ -27,9 +27,9 @@ namespace ren_utils {
      * @return Aligned pointer offsetted by up to `align - 1` bytes.
      */
     template<typename T>
-    inline static T* Ptr(T* addr, size_t align) {
+    inline static T* AlignPtr(T* addr, size_t align) {
       uintptr_t p = reinterpret_cast<uintptr_t>(addr);
-      uintptr_t aligned = Align::Ptr(p, align);
+      uintptr_t aligned = Align::AlignPtr(p, align);
       return reinterpret_cast<T*>(aligned);
     }
 
@@ -40,10 +40,51 @@ namespace ren_utils {
      * @param align Boundary to align to. This **MUST** be power of 2.
      * @return Aligned pointer offsetted by up to `align - 1` bytes.
      */
-    inline static uintptr_t Ptr(uintptr_t addr, size_t align) {
+    inline static uintptr_t AlignPtr(uintptr_t addr, size_t align) {
       const uintptr_t mask = align - 1;
       assert((align & mask) == 0);   // Power of 2
       return (addr + mask) & ~mask;
+    }
+
+    /**
+     * @brief Align pointer and store the shift in the one byte before align.
+     * @param orig Pointer to align
+     * @param align Number of bytes to align to
+     * @return Aligned pointer (original shifted by atleast 1 to `align` bytes)
+     * @note The memory pointed to by `orig` **MUST** have space for additional `align` bytes. That
+     *       is `sizeof(T)+align` bytes.
+     */
+    template<typename T>
+    static T* AlignPtrStore(T* orig, size_t align) {
+      uint8_t* p_orig = reinterpret_cast<uint8_t*>(orig);
+      uint8_t* p_aligned = reinterpret_cast<uint8_t*>(AlignPtr(orig, align));
+
+      if (p_orig == p_aligned)
+        p_aligned += align;
+      ptrdiff_t shift = p_aligned - p_orig;
+
+      // We store shift in one byte and 0 represents 256, so
+      // this is the limit.
+      assert(shift > 0 && shift <= 256);
+
+      // Store shift in the one byte before aligned address.
+      p_aligned[-1] = static_cast<uint8_t>(shift & 0xff);
+      return reinterpret_cast<T*>(p_aligned);
+    }
+
+    /**
+     * @brief Unalign the pointer aligned with AlignPtrStore
+     * @param aligned Pointer aligned with AlignPtrStore
+     * @return Original unaligned pointer
+     */
+    template<typename T>
+    static T* UnalignPtr(T* aligned) {
+      uint8_t* p_aligned = reinterpret_cast<uint8_t*>(aligned);
+      ptrdiff_t shift = p_aligned[-1];
+      if (shift == 0)
+        shift = 256;
+      p_aligned -= shift;
+      return reinterpret_cast<T*>(p_aligned);
     }
   };
 

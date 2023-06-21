@@ -41,28 +41,15 @@ void* StackAllocator::AllocAligned(size_t n_bytes, size_t align) {
   if (!p_mem)
     return nullptr;
 
-  // Align the allocated pointer. This will add max `align - 1` bytes to it.
-  uint8_t* p_aligned_mem = Align::Ptr(p_mem, align);
-  if (p_aligned_mem == p_mem)
-    p_aligned_mem += align;   // So that we can store the shift
-
-  // Store the number of shifted bytes in the one byte before the allocated address.
-  ptrdiff_t shift = p_aligned_mem - p_mem;
-  assert(shift > 0 && shift <= 256);
-  p_aligned_mem[-1] = static_cast<uint8_t>(shift & 0xff);
-
+  // Align the pointer and store the alignment.
+  uint8_t* p_aligned_mem = Align::AlignPtrStore(p_mem, align);
   return p_aligned_mem;
 }
 
 void* StackAllocator::GetAlignedBase(void* p_aligned_mem) {
   if (!p_aligned_mem)
     return nullptr;
-  uint8_t* p_amem = reinterpret_cast<uint8_t*>(p_aligned_mem);
-  ptrdiff_t shift = p_amem[-1];
-  if (shift == 0)
-    shift = 256;
-  uint8_t* p_base = p_amem - shift;
-  return reinterpret_cast<void*>(p_base);
+  return Align::UnalignPtr(p_aligned_mem);
 }
 
 void StackAllocator::FreeToMarker(const Marker& marker) {

@@ -121,24 +121,14 @@ namespace ren_utils {
     if (m_used == m_total)
       return nullptr;
 
-    // The first item in the linked list will be used.
-    auto p_raw = reinterpret_cast<uint8_t*>(m_first);
-
-    // Set the starting pointer to the pointer stored in the first item.
-    m_first = reinterpret_cast<uint8_t**>(*m_first);
-
-    // Align the pointer
-    uint8_t* aligned_p = Align::Ptr(p_raw, m_align);
-    if (aligned_p == p_raw)
-      aligned_p += m_align;   // Make space for storing the `shift`.
-
-    // Store how much we shifted the pointer to the first byte *before* the returned pointer.
-    ptrdiff_t shift = aligned_p - p_raw;
-    assert(shift > 0 && shift <= 256);
-    *(aligned_p - 1) = static_cast<uint8_t>(shift & 0xff);
+    // Take the first item from list and use it for object memory. Set the `m_first` to
+    // point to the next item in the list.
+    auto p_next = reinterpret_cast<uint8_t**>(*m_first);
+    auto p_item = Align::AlignPtrStore(reinterpret_cast<T*>(m_first), m_align);
+    m_first = p_next;
 
     m_used++;
-    return (T*)aligned_p;
+    return p_item;
   }
 
   template<class T>
@@ -146,19 +136,13 @@ namespace ren_utils {
     if (!ptr)
       return;
 
-    // Get the alignment shift and get the original pointer.
-    auto u8_ptr = reinterpret_cast<uint8_t*>(ptr);
-    ptrdiff_t shift = u8_ptr[-1];
-    if (shift == 0)
-      shift = 256;
-    u8_ptr -= shift;
+    T* p_orig = Align::UnalignPtr(ptr);
 
-    // Store pointer to the first item in memory pointed to by `u8_ptr`.
-    auto p = reinterpret_cast<uint8_t**>(u8_ptr);
+    // Relink the linked list. First is now `p_orig` and `m_first` points to it.
+    auto p = reinterpret_cast<uint8_t**>(p_orig);
     *p = reinterpret_cast<uint8_t*>(m_first);
-
-    // The first item is now `ptr` as we have added it to start of the list.
     m_first = p;
+
     m_used--;
   }
 
