@@ -150,7 +150,7 @@ TEST(StackAllocator, Empty) {
   EXPECT_FALSE(alloc.Empty());
 }
 
-TEST(Ptr_StackAllocator, new_ptr_basic) {
+TEST(StackAllocator_Ptr, new_ptr_basic) {
   StackAllocator alloc(70);
 
   auto p = new_ptr<int>(alloc, 7);
@@ -166,7 +166,7 @@ TEST(Ptr_StackAllocator, new_ptr_basic) {
   delete_ptr(p);
 }
 
-TEST(Ptr_StackAllocator, new_ptr_sizes) {
+TEST(StackAllocator_Ptr, new_ptr_sizes) {
   StackAllocator alloc(100);
   new_ptr<int>(alloc, 7);
   auto p2 = new_ptr<std::string>(alloc, "Hey");
@@ -177,13 +177,13 @@ TEST(Ptr_StackAllocator, new_ptr_sizes) {
   delete_ptr(p2);
 }
 
-TEST(Ptr_StackAllocator, new_ptr_too_large) {
+TEST(StackAllocator_Ptr, new_ptr_too_large) {
   StackAllocator alloc(10);
   new_ptr<int>(alloc, 1);
   EXPECT_THROW(new_ptr<std::string>(alloc, "test"), std::runtime_error);
 }
 
-TEST(Ptr_StackAllocator, delete_ptr_basic) {
+TEST(StackAllocator_Ptr, delete_ptr_basic) {
   StackAllocator alloc(20);
   auto p1 = new_ptr<int>(alloc, 1);
   auto p2 = new_ptr<size_t>(alloc, 2);
@@ -193,7 +193,7 @@ TEST(Ptr_StackAllocator, delete_ptr_basic) {
   EXPECT_EQ(alloc.GetCurrentSize(), 0U);
 }
 
-TEST(Ptr_StackAllocator, delete_ptr_wrong_order) {
+TEST(StackAllocator_Ptr, delete_ptr_wrong_order) {
   StackAllocator alloc(30);
   auto p1 = new_ptr<int>(alloc, 1);
   auto p2 = new_ptr<char>(alloc, 'a');
