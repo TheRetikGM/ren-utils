@@ -12,7 +12,6 @@
  */
 #pragma once
 
-#include "aligned.hpp"
 #include "PoolAllocator.hpp"
 #include "StackAllocator.h"
 #include "DoubleStackAllocator.h"
