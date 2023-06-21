@@ -45,6 +45,41 @@ namespace ren_utils {
      * @return Valid pointer to memory or nullptr on failure. That is if the two stacks are overlaping.
      */
     void* Alloc(Side side, size_t n_bytes);
+    /**
+     * @brief Allocate aligned memory on left or right stack.
+     * @param side Side of the stack
+     * @param n_bytes Number of bytes to allocate
+     * @param align Number of bytes to align to
+     * @return Pointer to the aligned memory or `nullptr` on failure
+     * @note This will allocate total of `n_bytes + align - 1` bytes
+     */
+    void* Alloc(Side side, size_t n_bytes, Align align);
+
+    /**
+     * @brief Allocate memory and construct object in allocator
+     * @param side Stack to use
+     * @param args Arguments to pass to object constructor
+     * @return Pointer to object or `nullptr` on failure.
+     */
+    template<class T, class... Args>
+    void* New(Side side, const Args&... args) {
+      T* p_mem = reinterpret_cast<T*>(Alloc(side, sizeof(T)));
+      return p_mem ? new (p_mem) T(args...) : nullptr;
+    }
+
+    /**
+     * @brief Allocate aligned memory and construct object in allocator.
+     * @param side Stack to use
+     * @param align Number of bytes to align object to
+     * @param args Arguments to pass to object constructor
+     * @return Aligned pointer to object or `nullptr` on failure
+     */
+    template<class T, class... Args>
+    void* New(Side side, Align align, const Args&... args) {
+      T* p_mem = reinterpret_cast<T*>(Alloc(side, sizeof(T), align));
+      return p_mem ? new (p_mem) T(args...) : nullptr;
+    }
+
     /// @return Marker to the current top of the left or right stack.
     inline Marker GetMarker(Side side) const {
       if (side == Side::LEFT)
@@ -103,23 +138,20 @@ namespace ren_utils {
    * @param args Arguments to pass to constructor
    * @return Pointer object wrapping this instance.
    * @exception std::runtime_error when there is no space for this object in DoubleStackAllocator.
+   * @note For aligned memory allocation pass `Align` as the first `args` parameter.
    */
   template<class T, class... Args>
   Ptr<T, DoubleStackAllocator>
   new_ptr(DoubleStackAllocator& alloc, AllocSide side, const Args&... args) {
     auto marker = alloc.GetMarker(side);
-    void* p_mem = alloc.Alloc(side, sizeof(T));
-    if (!p_mem)
+    Ptr<T, DoubleStackAllocator> ptr{ alloc.New<T>(side, args...), { marker, &alloc } };
+    if (!ptr.m_Ptr)
       throw std::runtime_error(
           string_format("Cannot allocate memory in %s stack. Stacks would be overlapping. Total size = %lu, Left stack size = %lu. Right stack size = %lu. Wanted size = %lu",
             side == AllocSide::LEFT ? "LEFT" : "RIGHT", alloc.GetSize(),
             alloc.GetCurrentSize(AllocSide::LEFT),
             alloc.GetCurrentSize(AllocSide::RIGHT), sizeof(T))
           );
-    Ptr<T, DoubleStackAllocator> ptr{
-      new (p_mem) T(args...),
-      { marker, &alloc }
-    };
     return ptr;
   }
 

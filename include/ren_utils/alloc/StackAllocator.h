@@ -54,15 +54,15 @@ namespace ren_utils {
      * @note Supports up to 256 alignemt.
      * @return Pointer to the aligned memory or `nullptr` on failure.
      */
-    void* AllocAligned(size_t n_bytes, size_t align);
+    void* Alloc(size_t n_bytes, Align align);
     template<class T, class... Args>
     inline T* New(const Args&... args) {
       T* mem = reinterpret_cast<T*>(Alloc(sizeof(T)));
       return mem ? new (mem) T(args...) : nullptr;
     }
     template<class T, class... Args>
-    inline T* NewAligned(const size_t& align, const Args&... args) {
-      T* mem = reinterpret_cast<T*>(AllocAligned(sizeof(T), align));
+    inline T* New(Align align, const Args&... args) {
+      T* mem = reinterpret_cast<T*>(Alloc(sizeof(T), align));
       return mem ? new (mem) T(args...) : nullptr;
     }
     /**
@@ -99,17 +99,6 @@ namespace ren_utils {
     size_t m_pTop;
   };
 
-  template<class T, class Func>
-  inline Ptr<T, StackAllocator>
-  _new_ptr(StackAllocator& alloc, const Func& new_func) {
-    auto marker = alloc.GetMarker();
-    Ptr<T, StackAllocator> ptr{ new_func(), { marker, &alloc } };
-    if (!ptr.m_Ptr)
-      throw std::runtime_error(string_format("Cannot allocate memory for object in StackAllocator. StackAllocator stack size = %lu, wanted size = %lu", alloc.GetSize(), alloc.GetSize() + sizeof(T)));
-    return ptr;
-  }
-
-
   /**
    * @brief Create new instance of object allocated inside StackAllocator.
    * @tparam T Type of the object to instantiate
@@ -117,30 +106,15 @@ namespace ren_utils {
    * @param args Arguments to pass to constructor
    * @return Pointer object wrapping this instance.
    * @exception std::runtime_error when there is no space for this object in StackAllocator
+   * @note For aligned memory allocation pass `Align` as the first `args` parameter.
    */
   template<class T, class... Args>
   Ptr<T, StackAllocator> new_ptr(StackAllocator& alloc, const Args&... args) {
-    const auto& alloc_func = [&alloc, &args...] {
-      return alloc.New<T>(args...);
-    };
-    return _new_ptr<T>(alloc, alloc_func);
-  }
-
-  /**
-   * @brief Create new aligned instance of object allocated inside StackAllocator.
-   * @tparam T Type of the object to instantiate
-   * @param alloc Instance of StackAllocator
-   * @param align Number of bytes to align instance to. This **MUST** be power of 2.
-   * @param args Arguments to pass to constructor
-   * @return Pointer object wrapping this instance.
-   * @exception std::runtime_error when there is no space for this object in StackAllocator
-   */
-  template<class T, class... Args>
-  Ptr<T, StackAllocator> new_ptr(StackAllocator& alloc, Align align, const Args&... args) {
-    const auto& alloc_func = [&alloc, &align, &args...]{
-      return alloc.NewAligned<T>(align, args...);
-    };
-    return _new_ptr<T>(alloc, alloc_func);
+    auto marker = alloc.GetMarker();
+    Ptr<T, StackAllocator> ptr{ alloc.New<T>(args...), { marker, &alloc } };
+    if (!ptr.m_Ptr)
+      throw std::runtime_error(string_format("Cannot allocate memory for object in StackAllocator. StackAllocator stack size = %lu, wanted size = %lu", alloc.GetSize(), alloc.GetSize() + sizeof(T)));
+    return ptr;
   }
 
   /**

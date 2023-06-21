@@ -35,6 +35,11 @@ void* DoubleStackAllocator::Alloc(Side side, size_t n_bytes) {
   return m_memory + m;
 }
 
+void* DoubleStackAllocator::Alloc(Side side, size_t n_bytes, Align align) {
+  void* p_mem = Alloc(side, n_bytes + align - 1);
+  return p_mem ? Align::AlignPtr(p_mem, align) : nullptr;
+}
+
 void DoubleStackAllocator::FreeToMarker(const Marker& marker) {
   const std::string errmsg = string_format(
       "This %s marker is not valid. It may have been implicitly freed by a call to FreeToMarker()"

@@ -31,19 +31,9 @@ void* StackAllocator::Alloc(size_t n_bytes) {
   return m_stack + p;
 }
 
-void* StackAllocator::AllocAligned(size_t n_bytes, size_t align) {
-  // Store enough bytes for even worst case scenario (align - 1),
-  // and store one more byte for storing the align shift.
-  size_t total_bytes = n_bytes + align;
-
-  // Allate enough memory for the alignment.
-  uint8_t* p_mem = (uint8_t*)Alloc(total_bytes);
-  if (!p_mem)
-    return nullptr;
-
-  // Align the pointer and store the alignment.
-  uint8_t* p_aligned_mem = Align::AlignPtrStore(p_mem, align);
-  return p_aligned_mem;
+void* StackAllocator::Alloc(size_t n_bytes, Align align) {
+  void* p_mem = Alloc(n_bytes + align - 1);
+  return p_mem ? Align::AlignPtr(p_mem, align) : nullptr;
 }
 
 void* StackAllocator::GetAlignedBase(void* p_aligned_mem) {
