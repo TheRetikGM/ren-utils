@@ -1,6 +1,6 @@
 /**
  * @brief Stack-based allocators.
- * @file stack.hpp
+ * @file stack.h
  * @author Jakub Kloub (theretikgm@gmail.com)
  */
 #pragma once
@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <cassert>
 #include <stdexcept>
-#include <type_traits>
 #include "allocator.hpp"
 #include "../basic.h"
 
@@ -48,6 +47,32 @@ namespace ren_utils {
      * @return Pointer to the memory or `nullptr` on failure.
      */
     void* Alloc(size_t n_bytes);
+    /**
+     * @brief Allocate aligned memory on the stack
+     * @param n_bytes Number of bytes to allocate
+     * @param align Number of bytes to align to. This **MUST**  be a power of 2.
+     * @note Supports up to 256 alignemt.
+     * @return Pointer to the aligned memory or `nullptr` on failure.
+     */
+    void* AllocAligned(size_t n_bytes, size_t align);
+    template<class T, class... Args>
+    inline T* New(const Args&... args) {
+      T* mem = reinterpret_cast<T*>(Alloc(sizeof(T)));
+      return mem ? new (mem) T(args...) : nullptr;
+    }
+    template<class T, class... Args>
+    inline T* NewAligned(const size_t& align, const Args&... args) {
+      T* mem = reinterpret_cast<T*>(AllocAligned(sizeof(T), align));
+      return mem ? new (mem) T(args...) : nullptr;
+    }
+    /**
+     * @brief Get the base of the aligned memory address.
+     * @param p_aligned_mem Pointer to the memory allocated with AllocAligned
+     * @note Undefined behaviour if the `p_aligned_mem` was not allocated with
+     *       AllocAligned.
+     * @return Pointer to the base address.
+     */
+    void* GetAlignedBase(void* p_aligned_mem);
     /// @return marker to the current top of the stack.
     inline Marker GetMarker() const { return Marker(m_pTop); }
     /**
@@ -74,6 +99,17 @@ namespace ren_utils {
     size_t m_pTop;
   };
 
+  template<class T, class Func>
+  inline Ptr<T, StackAllocator>
+  _new_ptr(StackAllocator& alloc, const Func& new_func) {
+    auto marker = alloc.GetMarker();
+    Ptr<T, StackAllocator> ptr{ new_func(), { marker, &alloc } };
+    if (!ptr.m_Ptr)
+      throw std::runtime_error(string_format("Cannot allocate memory for object in StackAllocator. StackAllocator stack size = %lu, wanted size = %lu", alloc.GetSize(), alloc.GetSize() + sizeof(T)));
+    return ptr;
+  }
+
+
   /**
    * @brief Create new instance of object allocated inside StackAllocator.
    * @tparam T Type of the object to instantiate
@@ -83,15 +119,28 @@ namespace ren_utils {
    * @exception std::runtime_error when there is no space for this object in StackAllocator
    */
   template<class T, class... Args>
-  Ptr<T, StackAllocator::PtrData> new_ptr(StackAllocator& alloc, const Args&... args) {
-    auto ptr = Ptr<T, StackAllocator::PtrData>();
-    ptr.m_PtrData.marker = alloc.GetMarker();
-    auto mem = alloc.Alloc(sizeof(T));
-    if (!mem)
-      throw std::runtime_error(string_format("Cannot allocate memory for object in StackAllocator. StackAllocator stack size = %lu, wanted size = %lu", alloc.GetSize(), alloc.GetSize() + sizeof(T)));
-    ptr.m_PtrData.p_alloc = &alloc;
-    ptr.m_Ptr = new (mem) T(args...);
-    return ptr;
+  Ptr<T, StackAllocator> new_ptr(StackAllocator& alloc, const Args&... args) {
+    const auto& alloc_func = [&alloc, &args...] {
+      return alloc.New<T>(args...);
+    };
+    return _new_ptr<T>(alloc, alloc_func);
+  }
+
+  /**
+   * @brief Create new aligned instance of object allocated inside StackAllocator.
+   * @tparam T Type of the object to instantiate
+   * @param alloc Instance of StackAllocator
+   * @param align Number of bytes to align instance to. This **MUST** be power of 2.
+   * @param args Arguments to pass to constructor
+   * @return Pointer object wrapping this instance.
+   * @exception std::runtime_error when there is no space for this object in StackAllocator
+   */
+  template<class T, class... Args>
+  Ptr<T, StackAllocator> new_ptr(StackAllocator& alloc, Align align, const Args&... args) {
+    const auto& alloc_func = [&alloc, &align, &args...]{
+      return alloc.NewAligned<T>(align, args...);
+    };
+    return _new_ptr<T>(alloc, alloc_func);
   }
 
   /**
@@ -102,7 +151,7 @@ namespace ren_utils {
    *          the old higher pointer object, then it will not be detected.
    */
   template<class T>
-  void delete_ptr(Ptr<T, StackAllocator::PtrData>& ptr) {
+  void delete_ptr(Ptr<T, StackAllocator>& ptr) {
     ptr.m_Ptr->~T();
     ptr.m_PtrData.p_alloc->FreeToMarker(ptr.m_PtrData.marker);
     ptr.m_Ptr = nullptr;
@@ -204,7 +253,7 @@ namespace ren_utils {
    * @exception std::runtime_error when there is no space for this object in DoubleStackAllocator.
    */
   template<class T, class... Args>
-  Ptr<T, DoubleStackAllocator::PtrData>
+  Ptr<T, DoubleStackAllocator>
   new_ptr(DoubleStackAllocator& alloc, AllocSide side, const Args&... args) {
     auto marker = alloc.GetMarker(side);
     void* p_mem = alloc.Alloc(side, sizeof(T));
@@ -215,7 +264,7 @@ namespace ren_utils {
             alloc.GetCurrentSize(AllocSide::LEFT),
             alloc.GetCurrentSize(AllocSide::RIGHT), sizeof(T))
           );
-    Ptr<T, DoubleStackAllocator::PtrData> ptr{
+    Ptr<T, DoubleStackAllocator> ptr{
       new (p_mem) T(args...),
       { marker, &alloc }
     };
@@ -228,7 +277,7 @@ namespace ren_utils {
    * @warning Same problem as with delete_ptr(Ptr<T, typename StackAllocator::PtrData>& ptr) but for both stacks.
    */
   template<class T>
-  void delete_ptr(Ptr<T, typename DoubleStackAllocator::PtrData>& ptr) {
+  void delete_ptr(Ptr<T, DoubleStackAllocator>& ptr) {
     ptr->~T();
     ptr.m_PtrData.p_alloc->FreeToMarker(ptr.m_PtrData.marker);
     ptr.m_Ptr = nullptr;

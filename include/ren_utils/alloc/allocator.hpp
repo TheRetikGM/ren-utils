@@ -5,17 +5,57 @@
  */
 #pragma once
 #include <cassert>
-#include <type_traits>
+#include <cstddef>
+#include <cstdint>
 
 namespace ren_utils {
+  /// Struct wrapping byte alignment size and providing useful functions for it.
+  struct Align {
+    size_t m_Bytes;
+    explicit Align(size_t bytes) : m_Bytes(bytes) {}
+    inline operator size_t() const { return m_Bytes; }
+    inline bool operator==(const size_t& rhs) const { return m_Bytes == rhs; }
+    inline bool operator!=(const size_t& rhs) const { return m_Bytes == rhs; }
+    inline bool operator<(const size_t& rhs) const { return m_Bytes == rhs; }
+    inline bool operator>(const size_t& rhs) const { return m_Bytes == rhs; }
+
+    /**
+     * @brief Align pointer to given byte boundary
+     * @tparam T Type of the pointer to align
+     * @param addr Pointer to align
+     * @param align Boundary to align to. This **MUST** be power of 2.
+     * @return Aligned pointer offsetted by up to `align - 1` bytes.
+     */
+    template<typename T>
+    inline static T* Ptr(T* addr, size_t align) {
+      uintptr_t p = reinterpret_cast<uintptr_t>(addr);
+      uintptr_t aligned = Align::Ptr(p, align);
+      return reinterpret_cast<T*>(aligned);
+    }
+
+    /**
+     * @brief Align pointer to given byte boundary
+     * @tparam T Type of the pointer to align
+     * @param addr Pointer to align
+     * @param align Boundary to align to. This **MUST** be power of 2.
+     * @return Aligned pointer offsetted by up to `align - 1` bytes.
+     */
+    inline static uintptr_t Ptr(uintptr_t addr, size_t align) {
+      const uintptr_t mask = align - 1;
+      assert((align & mask) == 0);   // Power of 2
+      return (addr + mask) & ~mask;
+    }
+  };
+
   /**
    * @brief Class representing a pointer to some object allocated with some allocator.
    * @tparam T Custom object to hold pointer to. This would be user-defined object.
    * @tparam AllocPtrData Allocator-specific data for help with managing this pointer.
    */
-  template<class T, class AllocPtrData>
+  template<class T, class Alloc>
   class Ptr {
   public:
+    using AllocPtrData = typename Alloc::PtrData;
     /// Raw stored pointer of the object T.
     T* m_Ptr{ nullptr };
     /// Allocator-specific pointer data.
@@ -44,7 +84,7 @@ namespace ren_utils {
    * @note This function needs to be specialized for each allocator explicitly.
    */
   template<class T, class Alloc, class... Args>
-  Ptr<T, typename Alloc::PtrData> new_ptr(Alloc, const Args&...) = delete;
+  Ptr<T, Alloc> new_ptr(Alloc, const Args&...) = delete;
 
   /**
    * @brief Delete pointer allocated with new_ptr() function.
@@ -53,5 +93,5 @@ namespace ren_utils {
    * @note This function needs to be specialized for each allocator explicitly.
    */
   template<class T, class Alloc>
-  void delete_ptr(Ptr<T, typename Alloc::PtrData>&) = delete;
+  void delete_ptr(Ptr<T, Alloc>&) = delete;
 } // namespace ren_utils
