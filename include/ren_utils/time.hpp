@@ -5,7 +5,6 @@
  * @author Jakub Kloub (theretikgm@gmail.com)
  */
 #pragma once
-#include "basic.h"
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -20,12 +19,7 @@ namespace ren_utils {
  */
 class TimeInfo {
 public:
-  const int &m_Year = m_year;    ///< Year from 0
-  const int &m_Month = m_month;  ///< Month 1-12
-  const int &m_Day = m_day;      ///< Day in given month
-  const int &m_Hour = m_hour;    ///< Hour 0-23
-  const int &m_Minute = m_minute;
-  const int &m_Second = m_second;
+  int m_Year{0}, m_Month{0}, m_Day{0}, m_Hour{0}, m_Minute{0}, m_Second{0};
 
   /**
    * @brief Construct TimeInfo from given `std::time_t`
@@ -34,12 +28,12 @@ public:
    */
   TimeInfo(std::time_t t = std::time(nullptr)) {
     m_tim = *localtime(&t);
-    m_year = m_tim.tm_year + 1900;
-    m_month = m_tim.tm_mon + 1;
-    m_day = m_tim.tm_mday;
-    m_hour = m_tim.tm_hour;
-    m_minute = m_tim.tm_min;
-    m_second = m_tim.tm_sec;
+    m_Year = m_tim.tm_year + 1900;
+    m_Month = m_tim.tm_mon + 1;
+    m_Day = m_tim.tm_mday;
+    m_Hour = m_tim.tm_hour;
+    m_Minute = m_tim.tm_min;
+    m_Second = m_tim.tm_sec;
   }
 
   /**
@@ -53,7 +47,6 @@ public:
 
 private:
   std::tm m_tim{};
-  int m_year{0}, m_month{0}, m_day{0}, m_hour{0}, m_minute{0}, m_second{0};
 };
 
 using millisec = std::chrono::milliseconds;

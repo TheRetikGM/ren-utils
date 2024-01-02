@@ -15,7 +15,6 @@
  * \endcode
  */
 #pragma once
-#include "basic.h"
 #include "time.hpp"
 #include <filesystem>
 #include <thread>

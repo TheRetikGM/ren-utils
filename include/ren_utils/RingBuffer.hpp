@@ -113,13 +113,13 @@ template<typename T>
 RingBuffer<T>::RingBuffer(size_t capacity) : m_capacity(capacity) {
   if (capacity == 0)
     throw std::invalid_argument("Capacity cannot be 0");
-  m_buf = new T[capacity];
+  m_buf = (T*)malloc(sizeof(T) * capacity);
 }
 
 template<typename T>
 RingBuffer<T>::~RingBuffer() {
   Clear();
-  delete[] m_buf;
+  free(m_buf);
 }
 
 template<typename T>
@@ -133,15 +133,15 @@ void RingBuffer<T>::deleteItem(size_t buf_index) {
 
 template<typename T>
 T& RingBuffer<T>::PushBack(const T& item) {
-  newItem(item, m_back);
-  size_t back = m_back;
-  m_back = (m_back + 1) % m_capacity;
-
   if (m_size == m_capacity) {
     deleteItem(m_front);
     m_front = (m_front + 1) % m_capacity;
   } else
     m_size++;
+
+  newItem(item, m_back);
+  size_t back = m_back;
+  m_back = (m_back + 1) % m_capacity;
 
   return m_buf[back];
 }
