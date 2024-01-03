@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <optional>
 #include <functional>
+#include <string>
 
 namespace ren_utils {
 /**

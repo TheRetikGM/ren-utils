@@ -162,7 +162,7 @@ namespace ren_utils {
    */
   template<class T>
   void delete_ptr(Ptr<T, DoubleStackAllocator>& ptr) {
-    ptr->~T();
+    ptr.m_Ptr->~T();
     ptr.m_PtrData.p_alloc->FreeToMarker(ptr.m_PtrData.marker);
     ptr.m_Ptr = nullptr;
   }
