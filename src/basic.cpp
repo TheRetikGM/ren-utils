@@ -8,7 +8,7 @@
 using namespace ren_utils;
 
 std::random_device ren_utils::rd;
-std::mt19937 gen(ren_utils::rd());
+std::mt19937 ren_utils::gen(ren_utils::rd());
 
 std::string ren_utils::string_format(std::string fmt, ...) {
   int size = 100;
