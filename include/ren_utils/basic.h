@@ -35,6 +35,6 @@ inline float random_float(float min, float max) {
 std::string string_format(std::string fmt, ...);
 
 /// String format alias
-#define format(...) ren_utils::string_format(__VA_ARGS__)
+#define strfmt(...) ren_utils::string_format(__VA_ARGS__)
 
 } // namespace ren_utils
